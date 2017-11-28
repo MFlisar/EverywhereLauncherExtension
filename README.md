@@ -1,6 +1,8 @@
 # EverywhereLauncherExtensions
 This is an extension app for [Everywhere Launcher](https://play.google.com/store/apps/details?id=com.appindustry.everywherelauncher)
 
+![Icon](https://lh3.googleusercontent.com/FcsZLjxsQpCQxXB9jGqcxpQzNXiglVY5MmTNSA2tZncv5nHdlWdAx5dHxuyPE2kaAw=w300)
+
 ## How to install it?
 1. Enable "Unknown Sources" in the android apps settings
 2. Download the extension app: ...
