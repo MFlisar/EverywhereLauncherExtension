@@ -81,7 +81,7 @@ public class CommonExtensionManager {
 
     public static void install(Context context) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse("https://github.com/MFlisar/EverywhereLauncherExtensions/blob/master/README.md"));
+        intent.setData(Uri.parse("https://github.com/MFlisar/EverywhereLauncherExtension/blob/master/README.md"));
 //        intent.setData(Uri.parse("https://github.com/MFlisar/EverywhereLauncherExtensions/raw/master/extension.apk"));
         context.startActivity(intent);
     }
