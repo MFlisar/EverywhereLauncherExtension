@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Everywhere Launcher Extension</string>
+
+    <string name="enable_accessibility_service">Enable ACCESSIBILITY SERVICE</string>
+
+    <string name="accessibility_service_description">Needed to retrieve the current top app from the system as well as for executing special button clicks via an action</string>
+
+    <string name="accessibility_state">Is Accessibility Service running?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+    <string name="already_running">Accessibility Service is already running</string>
+</resources>
