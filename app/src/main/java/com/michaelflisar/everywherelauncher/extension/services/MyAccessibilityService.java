@@ -36,49 +36,45 @@ public class MyAccessibilityService extends AccessibilityService {
     private Messenger mAppMessenger;
     private boolean mRemoteServiceConnected;
 
-    public class MyReceiver extends BroadcastReceiver {
+    public static boolean isAccessibilityEnabled() {
+        final String packageName = MainApp.get().getPackageName();
+        final String ACCESSIBILITY_SERVICE_NAME = packageName + "/" + MyAccessibilityService.class.getName().replace(packageName, "");
 
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(ACCESSIBILITY_SERVICE_INTENT)) {
-                Integer action = null;
-                boolean reportFinished = false;
-
-                if (intent.getExtras() != null) {
-                    action = intent.getExtras().getInt("action");
-                    reportFinished = intent.getExtras().getBoolean("reportFinished");
-                }
-
-                if (action != null) {
-                    switch (action) {
-                        case 0:
-                            mAppMessenger = null;
-                            if (intent.getExtras().containsKey("replyTo")) {
-                                mAppMessenger = intent.getExtras().getParcelable("replyTo");
-                            }
-                            break;
-                        case GLOBAL_ACTION_BACK:
-                        case GLOBAL_ACTION_HOME:
-                        case GLOBAL_ACTION_NOTIFICATIONS:
-                        case GLOBAL_ACTION_POWER_DIALOG:
-                        case GLOBAL_ACTION_QUICK_SETTINGS:
-                        case GLOBAL_ACTION_RECENTS:
-                        case GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN: {
-                            boolean result = performGlobalAction(action);
-                            if (reportFinished) {
-                                sendMessage(Message.obtain(null, action, CommonExtensionManager.ARG1_ACTION_FINISHED, 0), 500);
-                            }
-                            Log.d(TAG, String.format("Action %d executed: %b", action, result));
-                            break;
-                        }
-                        default: {
-                            Log.e(TAG, String.format("Unknown action %d", action));
-                            break;
-                        }
-                    }
-                }
+        AccessibilityManager am = (AccessibilityManager) MainApp.get().getSystemService(Context.ACCESSIBILITY_SERVICE);
+        List<AccessibilityServiceInfo> runningServices = am.getEnabledAccessibilityServiceList(AccessibilityEvent.TYPES_ALL_MASK);
+        for (AccessibilityServiceInfo service : runningServices) {
+            Log.d(TAG, String.format("ServiceId: %s", service.getId()));
+            if (ACCESSIBILITY_SERVICE_NAME.equals(service.getId())) {
+                Log.d(TAG, "Accessibility Service is enabled!");
+                return true;
             }
         }
+
+        return false;
+    }
+
+    public static void sendRegisterAppIntent(int msgWhat, RemoteService service, Messenger replyTo, boolean register) {
+        Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
+        i.putExtra("action", 0);
+        i.putExtra("msgWhat", msgWhat);
+        i.putExtra("replyTo", register ? replyTo : null);
+        service.sendBroadcast(i);
+    }
+
+    public static void sendBackIntent(int msgWhat, RemoteService service, Messenger replyTo) {
+        Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
+        i.putExtra("action", GLOBAL_ACTION_BACK);
+        i.putExtra("msgWhat", msgWhat);
+        i.putExtra("reportFinished", true);
+        service.sendBroadcast(i);
+    }
+
+    public static void sendRecentIntent(int msgWhat, RemoteService service, Messenger replyTo) {
+        Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
+        i.putExtra("action", GLOBAL_ACTION_RECENTS);
+        i.putExtra("msgWhat", msgWhat);
+        i.putExtra("reportFinished", false);
+        service.sendBroadcast(i);
     }
 
     @Override
@@ -125,50 +121,22 @@ public class MyAccessibilityService extends AccessibilityService {
     private void sendMessage(final Message message, int delay) {
         final RemoteService service = MainApp.getRemoteService();
         if (mAppMessenger != null && service != null) {
-            mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    service.send(mAppMessenger, message);
-                }
-            }, delay);
-        }
-    }
-
-    public static boolean isAccessibilityEnabled() {
-        final String packageName = MainApp.get().getPackageName();
-        final String ACCESSIBILITY_SERVICE_NAME = packageName + "/" + MyAccessibilityService.class.getName().replace(packageName, "");
-
-        AccessibilityManager am = (AccessibilityManager) MainApp.get().getSystemService(Context.ACCESSIBILITY_SERVICE);
-        List<AccessibilityServiceInfo> runningServices = am.getEnabledAccessibilityServiceList(AccessibilityEvent.TYPES_ALL_MASK);
-        for (AccessibilityServiceInfo service : runningServices) {
-            Log.d(TAG, String.format("ServiceId: %s", service.getId()));
-            if (ACCESSIBILITY_SERVICE_NAME.equals(service.getId())) {
-                Log.d(TAG, "Accessibility Service is enabled!");
-                return true;
+            if (delay == 0) {
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        service.send(mAppMessenger, message);
+                    }
+                });
+            } else {
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        service.send(mAppMessenger, message);
+                    }
+                }, delay);
             }
         }
-
-        return false;
-    }
-
-    public static void sendRegisterAppIntent(RemoteService service, Messenger replyTo, boolean register) {
-        Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
-        i.putExtra("action", 0);
-        i.putExtra("replyTo", register ? replyTo : null);
-        service.sendBroadcast(i);
-    }
-
-    public static void sendBackIntent(RemoteService service, Messenger replyTo) {
-        Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
-        i.putExtra("action", GLOBAL_ACTION_BACK);
-        i.putExtra("reportFinished", true);
-        service.sendBroadcast(i);
-    }
-
-    public static void sendRecentIntent(RemoteService service, Messenger replyTo) {
-        Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
-        i.putExtra("action", GLOBAL_ACTION_RECENTS);
-        service.sendBroadcast(i);
     }
 
     @Override
@@ -210,5 +178,52 @@ public class MyAccessibilityService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
+    }
+
+    public class MyReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(ACCESSIBILITY_SERVICE_INTENT)) {
+                Integer action = null;
+                boolean reportFinished = false;
+                int msgWhat = 0;
+
+                if (intent.getExtras() != null) {
+                    action = intent.getExtras().getInt("action");
+                    reportFinished = intent.getExtras().getBoolean("reportFinished");
+                    msgWhat = intent.getExtras().getInt("msgWhat");
+                }
+
+                if (action != null) {
+                    switch (action) {
+                        case 0:
+                            mAppMessenger = null;
+                            if (intent.getExtras().containsKey("replyTo")) {
+                                mAppMessenger = intent.getExtras().getParcelable("replyTo");
+                            }
+                            break;
+                        case GLOBAL_ACTION_BACK:
+                        case GLOBAL_ACTION_HOME:
+                        case GLOBAL_ACTION_NOTIFICATIONS:
+                        case GLOBAL_ACTION_POWER_DIALOG:
+                        case GLOBAL_ACTION_QUICK_SETTINGS:
+                        case GLOBAL_ACTION_RECENTS:
+                        case GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN: {
+                            boolean result = performGlobalAction(action);
+                            if (reportFinished) {
+                                sendMessage(Message.obtain(null, msgWhat, CommonExtensionManager.ARG1_ACTION_FINISHED, 0), 500);
+                            }
+                            Log.d(TAG, String.format("Action %d executed: %b", action, result));
+                            break;
+                        }
+                        default: {
+                            Log.e(TAG, String.format("Unknown action %d", action));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

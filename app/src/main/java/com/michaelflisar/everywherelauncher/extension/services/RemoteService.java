@@ -72,13 +72,13 @@ public class RemoteService extends Service {
             Message replyMessage = null;
             switch (msg.what) {
                 case CommonExtensionManager.REQUEST_REQUEST_REGISTER_APP:
-                    MyAccessibilityService.sendRegisterAppIntent(RemoteService.this, msg.replyTo, msg.arg1 == CommonExtensionManager.ARG1_REGISTER);
+                    MyAccessibilityService.sendRegisterAppIntent(msg.what, RemoteService.this, msg.replyTo, msg.arg1 == CommonExtensionManager.ARG1_REGISTER);
                     break;
                 case CommonExtensionManager.ACTION_BACK:
-                    MyAccessibilityService.sendBackIntent(RemoteService.this, msg.replyTo);
+                    MyAccessibilityService.sendBackIntent(msg.what, RemoteService.this, msg.replyTo);
                     break;
                 case CommonExtensionManager.ACTION_RECENTS:
-                    MyAccessibilityService.sendRecentIntent(RemoteService.this, msg.replyTo);
+                    MyAccessibilityService.sendRecentIntent(msg.what, RemoteService.this, msg.replyTo);
                     break;
                 case CommonExtensionManager.EVENT_FOREGROUND_CHANGED:
                     replyMessage = msg;
