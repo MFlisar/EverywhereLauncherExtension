@@ -1,5 +1,6 @@
 # EverywhereLauncherExtensions
 This is an extension app for [Everywhere Launcher](https://play.google.com/store/apps/details?id=com.appindustry.everywherelauncher)
+Current version: v1.0
 
 ![Icon](https://lh3.googleusercontent.com/FcsZLjxsQpCQxXB9jGqcxpQzNXiglVY5MmTNSA2tZncv5nHdlWdAx5dHxuyPE2kaAw=w300)
 

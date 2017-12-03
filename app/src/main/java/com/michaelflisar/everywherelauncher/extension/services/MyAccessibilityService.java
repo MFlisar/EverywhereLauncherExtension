@@ -42,11 +42,11 @@ public class MyAccessibilityService extends AccessibilityService {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(ACCESSIBILITY_SERVICE_INTENT)) {
                 Integer action = null;
-                boolean updateFocusable = false;
+                boolean reportFinished = false;
 
                 if (intent.getExtras() != null) {
                     action = intent.getExtras().getInt("action");
-                    updateFocusable = intent.getExtras().getBoolean("updateFocusable");
+                    reportFinished = intent.getExtras().getBoolean("reportFinished");
                 }
 
                 if (action != null) {
@@ -65,8 +65,8 @@ public class MyAccessibilityService extends AccessibilityService {
                         case GLOBAL_ACTION_RECENTS:
                         case GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN: {
                             boolean result = performGlobalAction(action);
-                            if (updateFocusable) {
-                                sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_UPDATE_OVERLAY_SERVICE_FOCUSABILITY, CommonExtensionManager.ARG1_ENABLE, 0), 500);
+                            if (reportFinished) {
+                                sendMessage(Message.obtain(null, action, CommonExtensionManager.ARG1_ACTION_FINISHED, 0), 500);
                             }
                             Log.d(TAG, String.format("Action %d executed: %b", action, result));
                             break;
@@ -159,10 +159,9 @@ public class MyAccessibilityService extends AccessibilityService {
     }
 
     public static void sendBackIntent(RemoteService service, Messenger replyTo) {
-        service.send(replyTo, Message.obtain(null, CommonExtensionManager.EVENT_UPDATE_OVERLAY_SERVICE_FOCUSABILITY, CommonExtensionManager.ARG1_DISABLE, 0));
         Intent i = new Intent(ACCESSIBILITY_SERVICE_INTENT);
         i.putExtra("action", GLOBAL_ACTION_BACK);
-        i.putExtra("updateFocusable", true);
+        i.putExtra("reportFinished", true);
         service.sendBroadcast(i);
     }
 
