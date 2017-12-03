@@ -6,7 +6,7 @@ Current version: v1.0
 
 ## How to install it?
 1. Enable *Unknown Sources* in the android apps settings
-2. Download the extension app: **[DOWNLOAD](https://github.com/MFlisar/EverywhereLauncherExtensions/raw/master/extension.apk)**
+2. Download the extension app: **[DOWNLOAD](https://github.com/MFlisar/EverywhereLauncherExtension/releases/download/1/app-release.apk)**
 3. Install it by simply executing it
 
 ## Why is this app not in the play store?
