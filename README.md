@@ -1,5 +1,6 @@
 # EverywhereLauncherExtensions
 This is an extension app for [Everywhere Launcher](https://play.google.com/store/apps/details?id=com.appindustry.everywherelauncher)
+
 Current version: v1.0
 
 ![Icon](https://lh3.googleusercontent.com/FcsZLjxsQpCQxXB9jGqcxpQzNXiglVY5MmTNSA2tZncv5nHdlWdAx5dHxuyPE2kaAw=w300)
@@ -8,6 +9,11 @@ Current version: v1.0
 1. Enable *Unknown Sources* in the android apps settings
 2. Download the extension app: **[DOWNLOAD](https://github.com/MFlisar/EverywhereLauncherExtension/releases/download/1/app-release.apk)**
 3. Install it by simply executing it
+
+## Questions? Need help?
+* contact me via mail from within the app
+* or add a comment to this google+ post: https://plus.google.com/u/0/109523487310510678977/posts/i1wTRdgXC5a
+* or just write a post into my google+ community for Everywhere Launcher: https://plus.google.com/u/0/communities/110905373339023922663
 
 ## Why is this app not in the play store?
 This app is the result of google's change for using the **ACCESSIBILITY SERVICE**. In the past google did not restrict the usage to any use case (not even in their descriptions), but now they do. They only allow the usage for apps that help disabled people to use the phone. Google does supsend all apps that use this service if they do not use it for their new defined purpose.
