@@ -51,7 +51,7 @@ public class CommonExtensionManager {
     public enum Link {
         MAIN_REPO("https://github.com/MFlisar/EverywhereLauncherExtension"),
         README("https://github.com/MFlisar/EverywhereLauncherExtension/blob/master/README.md"),
-        APK("https://github.com/MFlisar/EverywhereLauncherExtension/raw/master/extension.apk"),
+        APK("https://github.com/MFlisar/EverywhereLauncherExtension/releases/download/1/app-release.apk"),
         RELEASES("https://github.com/MFlisar/EverywhereLauncherExtension/releases");
 
         String link;
