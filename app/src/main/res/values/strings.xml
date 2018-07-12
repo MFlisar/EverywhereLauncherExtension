@@ -7,10 +7,12 @@
 
     <string name="accessibility_state">Accessibility Service running</string>
     <string name="version">App Version</string>
+    <string name="newest_version">Newest Version</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="readme">Readme</string>
     <string name="releases">Releases</string>
+    <string name="unknown">Unknown</string>
 
     <string name="already_running">Accessibility Service is already running</string>
 </resources>

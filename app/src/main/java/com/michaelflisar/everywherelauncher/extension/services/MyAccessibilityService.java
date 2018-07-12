@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,7 +18,10 @@ import android.os.Messenger;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
+import com.michaelflisar.everywherelauncher.extension.BuildConfig;
 import com.michaelflisar.everywherelauncher.extension.MainApp;
 import com.michaelflisar.everywherelauncher.extension.common.CommonExtensionManager;
 import com.michaelflisar.everywherelauncher.extension.common.ExtensionStateBroadcastReceiver;
@@ -35,6 +39,9 @@ public class MyAccessibilityService extends AccessibilityService {
     private ServiceConnection mRemoteServiceConnection;
     private Messenger mAppMessenger;
     private boolean mRemoteServiceConnected;
+
+    private CharSequence mEditViewPackageName = null;
+    private int mEditViewFocusFoundCounter = -1;
 
     public static boolean isAccessibilityEnabled() {
         final String packageName = MainApp.get().getPackageName();
@@ -139,41 +146,153 @@ public class MyAccessibilityService extends AccessibilityService {
         }
     }
 
-    @Override
-    protected void onServiceConnected() {
-        super.onServiceConnected();
-
-        //Configure these here for compatibility with API 13 and below.
-        AccessibilityServiceInfo config = new AccessibilityServiceInfo();
-        config.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;// | AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
-        config.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;// |  AccessibilityServiceInfo.FEEDBACK_SPOKEN;
-
-        if (Build.VERSION.SDK_INT >= 16)
-        //Just in case this helps
-        {
-            config.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
-        }
-
-        setServiceInfo(config);
-    }
+//    @Override
+//    protected void onServiceConnected() {
+//        super.onServiceConnected();
+//
+//        AccessibilityServiceInfo config = new AccessibilityServiceInfo();
+//
+//        //Configure these here for compatibility with API 13 and below.
+//        config.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED | AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED | AccessibilityEvent.TYPE_VIEW_FOCUSED
+//            | AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED | AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED | AccessibilityEvent.TYPE_WINDOWS_CHANGED;
+//        config.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;// |  AccessibilityServiceInfo.FEEDBACK_SPOKEN;
+//
+//        if (Build.VERSION.SDK_INT >= 16) {
+//            //Just in case this helps
+//            config.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+//        }
+//
+//        setServiceInfo(config);
+//    }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            String packageName = event.getPackageName() != null ? event.getPackageName().toString() : "";
-            String activityName = event.getClassName() != null ? event.getClassName().toString() : "";
 
+        if (BuildConfig.DEBUG) {
+            logEvent(event);
+        }
+
+        String packageName = event.getPackageName() != null ? event.getPackageName().toString() : "";
+        String className = event.getClassName() != null ? event.getClassName().toString() : "";
+        int windowType = (event.getSource() != null && event.getSource().getWindow() != null) ? event.getSource().getWindow().getType() : -1;
+
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             Bundle b = new Bundle();
             b.putString(CommonExtensionManager.MSG_ARG_PACKAGE_NAME, packageName);
-            b.putString(CommonExtensionManager.MSG_ARG_ACTIVITY_NAME, activityName);
+            b.putString(CommonExtensionManager.MSG_ARG_ACTIVITY_NAME, className);
             sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_FOREGROUND_CHANGED, 0, 0, b));
 
-//            TopAppChangedEvent e = new TopAppChangedEvent(packageName, activityName);
-//            MainApp.cache(TopAppChangedEvent.class.getName(), e);
-//            BusProvider.getInstance().post(e);
+            // app was changed, so we assume keyboard is hidden
+            if (mEditViewFocusFoundCounter >= 0 && mEditViewPackageName != null && !packageName.equals(mEditViewPackageName)) {
+                mEditViewFocusFoundCounter = 0;
+            }
+
         } else if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            Log.d(TAG, String.format("event: %s", event.toString()));
+            if (mEditViewFocusFoundCounter >= 0) {
+                if (className.contains("EditText")) {
+                    // we assume, the second event of this kind for an EditText after it got focus means that keyboard is hidden
+                    // one event of this type is coming immediately after opening anyways
+                    mEditViewFocusFoundCounter--;
+                }
+            }
+            // Input method event => we assume keyboard is shown
+            else if (windowType == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
+                mEditViewFocusFoundCounter = 1;
+                mEditViewPackageName = packageName;
+                sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_KEYBOARD_SHOWN, 0, 0, null));
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Keyboard shown");
+                }
+            }
+
+        } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+            if (className.contains("EditText")) {
+                // EditText got focus, we assume this opens up the keyboard
+                mEditViewFocusFoundCounter = 2;
+                mEditViewPackageName = packageName;
+                sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_KEYBOARD_SHOWN, 0, 0, null));
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Keyboard shown");
+                }
+            } else {
+                // something else got the focus, we assume keyboard is hidden
+                if (mEditViewFocusFoundCounter >= 0)
+                    mEditViewFocusFoundCounter = 0;
+            }
         }
+
+        // we send the keyboard hidden event once, then we set the counter to -1
+        if (mEditViewFocusFoundCounter == 0) {
+            sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_KEYBOARD_HIDDEN, 0, 0, null));
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Keyboard hidden");
+            }
+            mEditViewFocusFoundCounter = -1;
+            mEditViewPackageName = null;
+        }
+    }
+
+    private void logEvent(AccessibilityEvent event) {
+
+        String bounds = "";
+        String awiBounds = "";
+        AccessibilityNodeInfo ani = event.getSource();
+        String viewId = "";
+        AccessibilityWindowInfo awi = null;
+        if (ani != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                viewId = ani.getViewIdResourceName();
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                awi = ani.getWindow();
+            }
+            int parent = 0;
+            bounds = addAccessibilityNodeInfoLog(bounds, ani, parent);
+            while (ani.getParent() != null) {
+                ani = ani.getParent();
+                parent++;
+                bounds = addAccessibilityNodeInfoLog(bounds, ani, parent);
+            }
+
+            if (awi != null) {
+                parent = 0;
+                awiBounds = addAccessibilityWindowInfoLog(awiBounds, awi, parent);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    while (awi.getParent() != null) {
+                        awi = awi.getParent();
+                        parent++;
+                        awiBounds = addAccessibilityWindowInfoLog(awiBounds, awi, parent);
+                    }
+                }
+            }
+        }
+
+        Log.d(TAG, String.format("%s | className: %s | packageName: %s | viewId: %s | awi: %s | awiBounds: %s", AccessibilityEvent.eventTypeToString(event.getEventType()), event.getClassName(),
+                event.getPackageName(), viewId, awi, awiBounds));
+//            Log.d(TAG, String.format("%s | className: %s | bounds: %s | awi: %s", AccessibilityEvent.eventTypeToString(event.getEventType()), event.getClassName(), bounds, awi));
+//            Log.d(TAG, String.format("%s | source: %s | topSource [%d]: %s", event.toString(), event.getSource(), parent, ani));
+    }
+
+    private String addAccessibilityNodeInfoLog(String log, AccessibilityNodeInfo ani, int index) {
+        Rect rect1 = new Rect();
+        Rect rect2 = new Rect();
+        ani.getBoundsInParent(rect1);
+        ani.getBoundsInScreen(rect2);
+        String resName = "";
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            resName = ani.getViewIdResourceName();
+        }
+        log += String.format("%sresName[%d]: %s | bip: %s, bis: %s", index == 0 ? "" : " | ", index, resName, rect1, rect2);
+        return log;
+    }
+
+    private String addAccessibilityWindowInfoLog(String log, AccessibilityWindowInfo awi, int index) {
+        Rect rect1 = new Rect();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            awi.getBoundsInScreen(rect1);
+        }
+        log += String.format("%sbis[%d]: %s", index == 0 ? "" : " | ", index, rect1);
+        return log;
     }
 
     @Override

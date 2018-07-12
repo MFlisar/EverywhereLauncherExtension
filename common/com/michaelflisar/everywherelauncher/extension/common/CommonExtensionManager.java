@@ -31,7 +31,10 @@ public class CommonExtensionManager {
     public static final int ACTION_BACK = 2;
     public static final int ACTION_RECENTS = 3;
     public static final int REQUEST_REQUEST_REGISTER_APP = 1001;
+    public static final int REQUEST_REQUEST_VERSION_INFOS = 1002;
     public static final int EVENT_FOREGROUND_CHANGED = 2001;
+    public static final int EVENT_KEYBOARD_SHOWN = 2002;
+    public static final int EVENT_KEYBOARD_HIDDEN = 2003;
     public static final int ARG1_RUNNING = 1;
     public static final int ARG1_NOT_RUNNING = 2;
     public static final int ARG1_ENABLE = 3;
@@ -48,16 +51,23 @@ public class CommonExtensionManager {
     private static final String MY_ACCESSIBILITY_SERVICE_ID = MY_ACCESSIBILITY_SERVICE_COMPONENT.getPackageName() + "/" + MY_ACCESSIBILITY_SERVICE_COMPONENT.getClassName().replace(
             MY_ACCESSIBILITY_SERVICE_COMPONENT.getPackageName(), "");
 
+    public static final String RELEASE_PAGE_MAIN_LINK = "https://github.com/MFlisar/EverywhereLauncherExtension/releases/tag/";
+
     public enum Link {
         MAIN_REPO("https://github.com/MFlisar/EverywhereLauncherExtension"),
         README("https://github.com/MFlisar/EverywhereLauncherExtension/blob/master/README.md"),
         APK("https://github.com/MFlisar/EverywhereLauncherExtension/releases/download/1/app-release.apk"),
-        RELEASES("https://github.com/MFlisar/EverywhereLauncherExtension/releases");
+        RELEASES("https://github.com/MFlisar/EverywhereLauncherExtension/releases"),
+        LATEST_RELEASE("https://github.com/MFlisar/EverywhereLauncherExtension/releases/latest");
 
         String link;
 
         Link(String link) {
             this.link = link;
+        }
+
+        public String getLink() {
+            return link;
         }
     }
 
@@ -82,7 +92,7 @@ public class CommonExtensionManager {
             PackageInfo info = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
             version = info.versionCode;
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Extension App not installed!");
+            Log.d(TAG, "Extension App not installed!");
         }
         return version;
     }
@@ -90,6 +100,7 @@ public class CommonExtensionManager {
     public static void openLink(Link link, Context context) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setData(Uri.parse(link.link));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
     }
 
@@ -120,7 +131,14 @@ public class CommonExtensionManager {
     }
 
     protected void unbind(Context context, ServiceConnection serviceConnection) {
-        context.unbindService(serviceConnection);
+        try {
+            context.unbindService(serviceConnection);
+        } catch (IllegalArgumentException e) {
+            // Extension App may have been uninstalled
+//            if (!BuildConfig.DEBUG) {
+//                Log.e(TAG, "ERROR", e);
+//            }
+        }
         Log.d(TAG, "Unbinding RemoteService");
     }
 

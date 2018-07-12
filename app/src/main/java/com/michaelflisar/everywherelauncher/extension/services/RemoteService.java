@@ -9,9 +9,10 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
 
+import com.michaelflisar.everywherelauncher.extension.BuildConfig;
 import com.michaelflisar.everywherelauncher.extension.MainApp;
 import com.michaelflisar.everywherelauncher.extension.common.CommonExtensionManager;
-import com.michaelflisar.everywherelauncher.extension.common.ExtensionStateBroadcastReceiver;
+import com.michaelflisar.everywherelauncher.extension.utils.Utils;
 
 /**
  * Created by flisar on 27.11.2017.
@@ -56,7 +57,9 @@ public class RemoteService extends Service {
                 try {
                     replyTo.send(replyMessage);
                 } catch (RemoteException rme) {
-                    Log.e(TAG, "Can't send result message!", rme);
+                    if (!BuildConfig.DEBUG) {
+                        Log.e(TAG, "Can't send result message!", rme);
+                    }
                 }
             }
         }
@@ -73,6 +76,11 @@ public class RemoteService extends Service {
             switch (msg.what) {
                 case CommonExtensionManager.REQUEST_REQUEST_REGISTER_APP:
                     MyAccessibilityService.sendRegisterAppIntent(msg.what, RemoteService.this, msg.replyTo, msg.arg1 == CommonExtensionManager.ARG1_REGISTER);
+                    break;
+                case CommonExtensionManager.REQUEST_REQUEST_VERSION_INFOS:
+                    Integer newestExtensionVersion = Utils.getNewestExtensionVersion();
+                    int installedVersion = Utils.getAppVersion(RemoteService.this);
+                    replyMessage = Message.obtain(null, msg.what, installedVersion, newestExtensionVersion == null ? -1 : newestExtensionVersion);
                     break;
                 case CommonExtensionManager.ACTION_BACK:
                     MyAccessibilityService.sendBackIntent(msg.what, RemoteService.this, msg.replyTo);
