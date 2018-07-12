@@ -12,8 +12,8 @@ Current version: v1.0
 
 ## Questions? Need help?
 * contact me via mail from within the app
-* or add a comment to this google+ post: https://plus.google.com/u/0/109523487310510678977/posts/i1wTRdgXC5a
-* or just write a post into my google+ community for Everywhere Launcher: https://plus.google.com/u/0/communities/110905373339023922663
+* or add a comment to this google+ post: [Post](https://plus.google.com/u/0/109523487310510678977/posts/i1wTRdgXC5a)
+* or just write a post into my google+ community for Everywhere Launcher: [Google+ Community](https://plus.google.com/u/0/communities/110905373339023922663)
 
 ## Why is this app not in the play store?
 This app is the result of google's change for using the **ACCESSIBILITY SERVICE**. In the past google did not restrict the usage to any use case (not even in their descriptions), but now they do. They only allow the usage for apps that help disabled people to use the phone. Google does supsend all apps that use this service if they do not use it for their new defined purpose.
