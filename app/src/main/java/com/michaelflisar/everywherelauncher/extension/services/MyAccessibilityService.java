@@ -34,6 +34,9 @@ public class MyAccessibilityService extends AccessibilityService {
 
     private static final String ACCESSIBILITY_SERVICE_INTENT = MyAccessibilityService.class.getName() + "-ACCESSIBILITY_SERVICE_INTENT";
 
+    private static final boolean DETECT_KEYBOARD_IN_EDIT_TEXTS = true;
+    private static final boolean DETECT_KEYBOARD_VIA_INPUT_METHOD_EVENTS = true;
+
     private BroadcastReceiver mReceiver;
     private Handler mHandler;
     private ServiceConnection mRemoteServiceConnection;
@@ -174,7 +177,9 @@ public class MyAccessibilityService extends AccessibilityService {
 
         String packageName = event.getPackageName() != null ? event.getPackageName().toString() : "";
         String className = event.getClassName() != null ? event.getClassName().toString() : "";
-        int windowType = (event.getSource() != null && event.getSource().getWindow() != null) ? event.getSource().getWindow().getType() : -1;
+        AccessibilityNodeInfo ani = event.getSource();
+        int windowType = (ani != null && ani.getWindow() != null) ? ani.getWindow().getType() : -1;
+        Boolean hasFocus = ani != null ? ani.isFocused() : null;
 
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             Bundle b = new Bundle();
@@ -189,30 +194,32 @@ public class MyAccessibilityService extends AccessibilityService {
 
         } else if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             if (mEditViewFocusFoundCounter >= 0) {
-                if (className.contains("EditText")) {
+                // looks like this is not happening with hasFocus == false, so this probalby will never be used anymore
+                if (className.contains("EditText") && hasFocus != null && !hasFocus) {
                     // we assume, the second event of this kind for an EditText after it got focus means that keyboard is hidden
                     // one event of this type is coming immediately after opening anyways
                     mEditViewFocusFoundCounter--;
                 }
             }
             // Input method event => we assume keyboard is shown
-            else if (windowType == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
+            // happens in non EditText Views and also whenever something is inserted into an EditText View
+            else if (DETECT_KEYBOARD_VIA_INPUT_METHOD_EVENTS && windowType == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
                 mEditViewFocusFoundCounter = 1;
                 mEditViewPackageName = packageName;
                 sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_KEYBOARD_SHOWN, 0, 0, null));
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Keyboard shown");
+                    Log.d(TAG, String.format("Keyboard shown : %s", packageName));
                 }
             }
 
         } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
-            if (className.contains("EditText")) {
+            if (DETECT_KEYBOARD_IN_EDIT_TEXTS && className.contains("EditText")) {
                 // EditText got focus, we assume this opens up the keyboard
                 mEditViewFocusFoundCounter = 2;
                 mEditViewPackageName = packageName;
                 sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_KEYBOARD_SHOWN, 0, 0, null));
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Keyboard shown");
+                    Log.d(TAG, String.format("Keyboard shown : %s", packageName));
                 }
             } else {
                 // something else got the focus, we assume keyboard is hidden
@@ -225,7 +232,7 @@ public class MyAccessibilityService extends AccessibilityService {
         if (mEditViewFocusFoundCounter == 0) {
             sendMessage(Message.obtain(null, CommonExtensionManager.EVENT_KEYBOARD_HIDDEN, 0, 0, null));
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Keyboard hidden");
+                Log.d(TAG, String.format("Keyboard hidden : %s", packageName));
             }
             mEditViewFocusFoundCounter = -1;
             mEditViewPackageName = null;
